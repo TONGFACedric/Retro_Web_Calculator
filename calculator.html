@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <!-- Calculation history display -->
+            <div class="calculation-history" id="history"></div>
+            <!-- Main display input -->
+            <input type="text" id="display" name="display" readonly>
+        </div>
+        
+        <div class="buttons">
+            <!-- First row: Clear and operators -->
+            <input type="button" value="AC" class="operator" onclick="clearDisplay()">
+            <input type="button" value="DE" class="operator" onclick="deleteLast()">
+            <input type="button" value="%" class="operator" onclick="appendOperator('%')">
+            <input type="button" value="/" class="operator" onclick="appendOperator('/')">
+            
+            <!-- Second row: Numbers 7-9 and multiplication -->
+            <input type="button" value="7" onclick="appendNumber('7')">
+            <input type="button" value="8" onclick="appendNumber('8')">
+            <input type="button" value="9" onclick="appendNumber('9')">
+            <input type="button" value="*" class="operator" onclick="appendOperator('*')">
+            
+            <!-- Third row: Numbers 4-6 and subtraction -->
+            <input type="button" value="4" onclick="appendNumber('4')">
+            <input type="button" value="5" onclick="appendNumber('5')">
+            <input type="button" value="6" onclick="appendNumber('6')">
+            <input type="button" value="-" class="operator" onclick="appendOperator('-')">
+            
+            <!-- Fourth row: Numbers 1-3 and addition -->
+            <input type="button" value="1" onclick="appendNumber('1')">
+            <input type="button" value="2" onclick="appendNumber('2')">
+            <input type="button" value="3" onclick="appendNumber('3')">
+            <input type="button" value="+" class="operator" onclick="appendOperator('+')">
+            
+            <!-- Fifth row: Zero, decimal, and equals -->
+            <input type="button" value="00" onclick="appendNumber('00')">
+            <input type="button" value="0" onclick="appendNumber('0')">
+            <input type="button" value="." onclick="appendDecimal()">
+            <input type="button" value="=" class="equal" onclick="calculate()">
+        </div>
+    </div>
+    
+    <!-- Copyright notice -->
+    <div class="copyright">© 2025 Retro Calculator TONGFA LOMBO Yann Cedric William - Full Stack Developer. All rights reserved.</div>
+
+    <script>
+        // Get DOM elements
+        const display = document.getElementById('display');
+        const historyDisplay = document.getElementById('history');
+        
+        // Store the current calculation expression
+        let currentExpression = '';
+        
+        // Store the last result for chain calculations
+        let lastResult = null;
+        
+        // Flag to track if we're starting a new calculation after equals
+        let newCalculation = true;
+
+        // Function to append numbers to the display
+        function appendNumber(number) {
+            if (newCalculation) {
+                // Clear display if starting a new calculation
+                display.value = '';
+                currentExpression = '';
+                newCalculation = false;
+            }
+            
+            // Prevent multiple zeros at the beginning
+            if (display.value === '0' && number !== '00') {
+                display.value = number;
+                currentExpression = number;
+            } else {
+                display.value += number;
+                currentExpression += number;
+            }
+        }
+
+        // Function to append operators to the expression
+        function appendOperator(operator) {
+            if (newCalculation && lastResult !== null) {
+                // Start new calculation with last result
+                currentExpression = lastResult + operator;
+                display.value = operator;
+                newCalculation = false;
+            } else {
+                // Replace the last operator if one exists
+                const lastChar = currentExpression.slice(-1);
+                if (['+', '-', '*', '/', '%'].includes(lastChar)) {
+                    currentExpression = currentExpression.slice(0, -1) + operator;
+                    display.value = display.value.slice(0, -1) + operator;
+                } else {
+                    currentExpression += operator;
+                    display.value = currentExpression;
+                    //display.value = operator;
+                }
+            }
+        }
+
+        // Function to append decimal point
+        function appendDecimal() {
+            if (newCalculation) {
+                display.value = '0.';
+                currentExpression = '0.';
+                newCalculation = false;
+                return;
+            }
+            
+            // Get the current number to check if it already has a decimal
+            const operators = currentExpression.split(/[\+\-\*\/\%]/);
+            const currentNumber = operators[operators.length - 1];
+            
+            if (!currentNumber.includes('.')) {
+                display.value += '.';
+                currentExpression += '.';
+            }
+        }
+
+        // Function to calculate the expression
+        function calculate() {
+            try {
+                // Show the full expression in history
+                historyDisplay.textContent = currentExpression + ' =';
+                
+                // Evaluate the expression safely
+                const result = eval(currentExpression);
+                
+                // Format the result to avoid long decimals
+                display.value = formatResult(result);
+                
+                // Store the result for potential chain calculations
+                lastResult = result;
+                
+                // Reset the expression to the result for further calculations
+                currentExpression = result.toString();
+                
+                // Set flag for new calculation
+                newCalculation = true;
+            } catch (error) {
+                // Handle calculation errors
+                display.value = 'Error';
+                currentExpression = '';
+                newCalculation = true;
+            }
+        }
+
+        // Function to format the result (limit decimal places)
+        function formatResult(num) {
+            // Round to 8 decimal places to avoid floating point precision issues
+            return Math.round(num * 100000000) / 100000000;
+        }
+
+        // Function to clear the display and reset the calculator
+        function clearDisplay() {
+            display.value = '';
+            currentExpression = '';
+            historyDisplay.textContent = '';
+            lastResult = null;
+            newCalculation = true;
+        }
+
+        // Function to delete the last character
+        function deleteLast() {
+            if (display.value.length > 0) {
+                display.value = display.value.slice(0, -1);
+                currentExpression = currentExpression.slice(0, -1);
+            }
+        }
+
+        // Add keyboard support for better accessibility
+        document.addEventListener('keydown', function(event) {
+            // Allow numbers
+            if (event.key >= '0' && event.key <= '9') {
+                appendNumber(event.key);
+            }
+            // Allow operators
+            else if (['+', '-', '*', '/'].includes(event.key)) {
+                appendOperator(event.key);
+            }
+            // Allow decimal point
+            else if (event.key === '.') {
+                appendDecimal();
+            }
+            // Allow equals or Enter key
+            else if (event.key === '=' || event.key === 'Enter') {
+                calculate();
+            }
+            // Allow backspace for deletion
+            else if (event.key === 'Backspace') {
+                deleteLast();
+            }
+            // Allow Escape for clear
+            else if (event.key === 'Escape') {
+                clearDisplay();
+            }
+        });
+    </script>
+</body>
+</html>
